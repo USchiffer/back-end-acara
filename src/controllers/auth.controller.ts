@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import * as yup from 'yup';
 import UserModel from '../models/user.model';
 import { encrypt } from '../utils/encryption';
+import { generateToken } from '../utils/jwt';
+import { IReqUser } from '../middleware/auth.middleware';
 
 type TRegister = {
   fullName: string;
@@ -90,9 +92,32 @@ export default {
         });
       }
 
+      const token = generateToken({
+        id: userByIdentifier._id,
+        role: userByIdentifier.role,
+      });
+
       res.status(200).json({
         messsage: 'login Success',
-        data: userByIdentifier,
+        data: token,
+      });
+    } catch (error) {
+      const err = error as unknown as Error;
+      res.status(400).json({
+        message: err.message,
+        data: null,
+      });
+    }
+  },
+
+  async me(req: IReqUser, res: Response) {
+    try {
+      const user = req.user;
+      const result = await UserModel.findById(user?.id);
+
+      res.status(200).json({
+        message: 'Success get user profile',
+        data: result,
       });
     } catch (error) {
       const err = error as unknown as Error;
