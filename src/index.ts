@@ -3,6 +3,8 @@ import bodyParser from 'body-parser';
 import router from './routes/api';
 import db from './utils/database';
 
+const app = express();
+
 async function init() {
   try {
     const result = await db();
@@ -33,3 +35,5 @@ async function init() {
 }
 
 init();
+
+export default app;
