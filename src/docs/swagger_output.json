@@ -124,6 +124,37 @@
           }
         ]
       }
+    },
+    "/auth/activation": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "description": "",
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActivationRequest"
+              }
+            },
+            "application/xml": {
+              "schema": {
+                "$ref": "#/components/schemas/ActivationRequest"
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -148,6 +179,46 @@
         },
         "xml": {
           "name": "loginRequest"
+        }
+      },
+      "RegisterRequest": {
+        "type": "object",
+        "properties": {
+          "fullName": {
+            "type": "string",
+            "example": "Aditya"
+          },
+          "username": {
+            "type": "string",
+            "example": "aditya123"
+          },
+          "email": {
+            "type": "string",
+            "example": "kakaaditya@yopmail.com"
+          },
+          "password": {
+            "type": "string",
+            "example": "1234"
+          },
+          "confirmPassword": {
+            "type": "string",
+            "example": "1234"
+          }
+        },
+        "xml": {
+          "name": "RegisterRequest"
+        }
+      },
+      "ActivationRequest": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "abcdefg"
+          }
+        },
+        "xml": {
+          "name": "ActivationRequest"
         }
       }
     }

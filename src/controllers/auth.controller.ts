@@ -22,7 +22,24 @@ const registerValidateSchema = yup.object({
   fullName: yup.string().required(),
   username: yup.string().required(),
   email: yup.string().email().required(),
-  password: yup.string().required(),
+  password: yup
+    .string()
+    .required()
+    .min(6, 'Passsword must be at least 6 characters')
+    .test(
+      'at-least-one-uppercase-letter',
+      'contains at least one uppercase letter',
+      (value) => {
+        if (!value) return false;
+        const regex = /^(?=.*[A-Z])/;
+        return regex.test(value);
+      }
+    )
+    .test('at-least-one-number', 'contains at least one number', (value) => {
+      if (!value) return false;
+      const regex = /^(?=.*[0-9])/;
+      return regex.test(value);
+    }),
   confirmPassword: yup
     .string()
     .required()
@@ -83,6 +100,7 @@ export default {
             username: identifier,
           },
         ],
+        isActive: true,
       });
 
       if (!userByIdentifier) {
@@ -133,6 +151,40 @@ export default {
       res.status(200).json({
         message: 'Success get user profile',
         data: result,
+      });
+    } catch (error) {
+      const err = error as unknown as Error;
+      res.status(400).json({
+        message: err.message,
+        data: null,
+      });
+    }
+  },
+  async activation(req: Request, res: Response) {
+    /*
+     #swagger.tags = ['Auth']
+     #swagger.requestBody = {
+       required: true,
+       schema: { $ref: '#/components/schemas/ActivationRequest' }
+     }
+     */
+    try {
+      const { code } = req.body as { code: string };
+
+      const user = await UserModel.findOneAndUpdate(
+        {
+          activationCode: code,
+        },
+        {
+          isActive: true,
+        },
+        {
+          new: true,
+        }
+      );
+      res.status(200).json({
+        message: 'user successfully updated',
+        data: user,
       });
     } catch (error) {
       const err = error as unknown as Error;
