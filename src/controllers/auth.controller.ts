@@ -5,6 +5,9 @@ import { encrypt } from '../utils/encryption';
 import { generateToken } from '../utils/jwt';
 import { IReqUser } from '../utils/interface';
 import response from '../utils/response';
+// @ts-ignore
+import dbMySQL from '../../models';
+const SequelizeUser = (dbMySQL as any).User;
 
 type TRegister = {
   fullName: string;
@@ -70,6 +73,24 @@ export default {
         email,
         password,
       });
+      try {
+        await SequelizeUser.create({
+          fullName,
+          username,
+          email,
+          // Menggunakan password yang sama dengan MongoDB.
+          // Jika di model Mongoose ada 'pre-save encrypt', pastikan password ini sudah ter-encrypt.
+          password,
+          role: 'admin', // Default role sesuai data yang kamu punya
+          isActive: true,
+          profilePicture: 'user.jpg', // Default sesuai data kamu
+          activationCode: '', // Bisa diisi jika ada logic kodenya
+        });
+        console.log('Berhasil Sinkronisasi ke MySQL');
+      } catch (mysqlError: any) {
+        // Note: Jika MySQL gagal, kita hanya log di terminal agar tidak mengganggu user
+        console.error('Gagal Sinkronisasi ke MySQL:', mysqlError.message);
+      }
 
       response.success(res, result, 'success registration');
     } catch (error) {
@@ -86,18 +107,15 @@ export default {
      */
     const { identifier, password } = req.body as unknown as TLogin;
     try {
+      const { Op } = require('sequelize');
+
       //ambil data user berdasarkan identifier
 
-      const userByIdentifier = await UserModel.findOne({
-        $or: [
-          {
-            email: identifier,
-          },
-          {
-            username: identifier,
-          },
-        ],
-        isActive: true,
+      const userByIdentifier = await SequelizeUser.findOne({
+        where: {
+          [Op.or]: [{ email: identifier }, { username: identifier }],
+          isActive: true,
+        },
       });
 
       if (!userByIdentifier) {
@@ -112,7 +130,7 @@ export default {
       }
 
       const token = generateToken({
-        id: userByIdentifier._id,
+        id: userByIdentifier.id,
         role: userByIdentifier.role,
         createdAt: userByIdentifier.createdAt,
       });
@@ -130,9 +148,17 @@ export default {
      */
     try {
       const user = req.user;
-      const result = await UserModel.findById(user?.id);
+      const result = await (dbMySQL as any).User.findByPk(user?.id);
 
-      response.success(res, result, 'success get user profile');
+      const userData = {
+        id: result.id,
+        fullName: result.fullName,
+        email: result.email,
+        role: result.role,
+        profilePicture: result.profilePicture,
+      };
+
+      response.success(res, userData, 'success get user profile');
     } catch (error) {
       response.error(res, error, 'failed get user profile');
     }
@@ -148,17 +174,17 @@ export default {
     try {
       const { code } = req.body as { code: string };
 
-      const user = await UserModel.findOneAndUpdate(
-        {
-          activationCode: code,
-        },
-        {
-          isActive: true,
-        },
-        {
-          new: true,
-        }
+      const user = await SequelizeUser.findOne({
+        where: { activationCode: code },
+      });
+      if (user) {
+        await user.update({ isActive: true });
+      }
+      await UserModel.findOneAndUpdate(
+        { activationCode: code },
+        { isActive: true }
       );
+
       response.success(res, user, 'account activated successfully');
     } catch (error) {
       response.error(res, error, 'user is failed activated');
